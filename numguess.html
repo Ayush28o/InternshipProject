@@ -1,0 +1,766 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1">
+<title>Warmer, Colder</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,500;0,9..144,600;1,9..144,500&family=Work+Sans:wght@400;500;600;700&family=Courier+Prime:wght@400;700&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --paper: #F2EADA;
+    --paper-2: #E9DEC7;
+    --card: #FAF4E6;
+    --ink: #2C2620;
+    --ink-soft: #6B6152;
+    --line: #D8C9A6;
+    --rust: #B85C33;
+    --rust-soft: #B85C3320;
+    --pine: #3E6357;
+    --pine-soft: #3E635720;
+    --gold: #A9781F;
+    --gold-soft: #A9781F22;
+    --danger: #9E3B2E;
+    --danger-soft: #9E3B2E1a;
+  }
+  *{ box-sizing:border-box; }
+  html,body{ height:100%; }
+  body{
+    margin:0;
+    font-family:'Work Sans', sans-serif;
+    color:var(--ink);
+    background: var(--paper);
+    min-height:100%;
+    padding: 34px 16px 60px;
+    display:flex;
+    justify-content:center;
+    position:relative;
+  }
+  body::before{
+    content:"";
+    position:fixed; inset:0; pointer-events:none; z-index:0;
+    opacity:.5; mix-blend-mode:multiply;
+    background-image:url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='180' height='180'><filter id='n'><feTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='2' stitchTiles='stitch'/><feColorMatrix type='matrix' values='0 0 0 0 0  0 0 0 0 0  0 0 0 0 0  0 0 0 0.05 0'/></filter><rect width='100%25' height='100%25' filter='url(%23n)'/></svg>");
+  }
+  .display{ font-family:'Fraunces', serif; }
+  .mono{ font-family:'Courier Prime', monospace; }
+  ::selection{ background: var(--gold-soft); color: var(--ink); }
+
+  .wrap{ width:100%; max-width: 600px; position:relative; z-index:1; }
+
+  /* ---------- header ---------- */
+  .hud{
+    display:flex; align-items:flex-end; justify-content:space-between;
+    padding-bottom:16px; margin-bottom:20px;
+    border-bottom:2px solid var(--ink);
+  }
+  .hud-title .eyebrow{
+    font-family:'Courier Prime', monospace;
+    font-size:11.5px; letter-spacing:.1em; text-transform:uppercase;
+    color:var(--ink-soft);
+  }
+  .hud-title h1{
+    font-family:'Fraunces', serif;
+    font-style:italic;
+    font-size: clamp(28px, 6.5vw, 38px);
+    font-weight:600; letter-spacing:-0.01em;
+    margin:2px 0 0;
+    color:var(--ink);
+  }
+  .hud-right{ display:flex; align-items:center; gap:16px; }
+  .hud-stat{ text-align:right; }
+  .hud-stat .k{ font-size:10.5px; letter-spacing:.08em; text-transform:uppercase; color:var(--ink-soft); }
+  .hud-stat .v{ font-family:'Courier Prime', monospace; font-size:16px; font-weight:700; }
+  .icon-btn{
+    width:38px; height:38px; border-radius:50%;
+    border:2px solid var(--ink); background:var(--card);
+    color:var(--ink); cursor:pointer;
+    display:flex; align-items:center; justify-content:center;
+    box-shadow: 2px 2px 0 var(--ink);
+    transition: transform .08s ease, box-shadow .08s ease;
+  }
+  .icon-btn:hover{ transform: translate(-1px,-1px); box-shadow: 3px 3px 0 var(--ink); }
+  .icon-btn:active{ transform: translate(1px,1px); box-shadow: 1px 1px 0 var(--ink); }
+  .icon-btn:focus-visible, button:focus-visible, input:focus-visible{
+    outline: 2px dashed var(--pine); outline-offset:3px;
+  }
+  .icon-btn svg{ width:17px; height:17px; }
+
+  .card{
+    background:var(--card);
+    border:2px solid var(--ink);
+    border-radius: 18px 14px 20px 12px;
+    box-shadow: 4px 5px 0 var(--paper-2), 4px 5px 0 1px var(--ink);
+    padding:26px;
+    position:relative;
+  }
+  .hidden{ display:none !important; }
+
+  /* ---------- setup ---------- */
+  .section-label{
+    font-family:'Courier Prime', monospace;
+    font-size:11.5px; letter-spacing:.08em; text-transform:uppercase;
+    color:var(--ink-soft); margin-bottom:10px;
+  }
+  .presets{ display:flex; gap:10px; flex-wrap:wrap; margin-bottom:22px; }
+  .preset{
+    flex:1; min-width:112px;
+    font-family:'Work Sans', sans-serif;
+    font-size:13px; font-weight:600;
+    padding:11px 12px; border-radius:10px;
+    border:2px dashed var(--line); background:var(--paper);
+    color:var(--ink-soft);
+    cursor:pointer; text-align:left;
+    transition: border-color .12s ease, color .12s ease, transform .1s ease;
+  }
+  .preset:nth-child(1){ transform: rotate(-0.6deg); }
+  .preset:nth-child(2){ transform: rotate(0.4deg); }
+  .preset:nth-child(3){ transform: rotate(-0.3deg); }
+  .preset .p-name{ display:block; color:var(--ink); font-family:'Fraunces', serif; font-size:15px; margin-bottom:2px; }
+  .preset .p-range{ display:block; font-family:'Courier Prime', monospace; font-size:12px; }
+  .preset:hover{ border-color:var(--ink-soft); }
+  .preset.active{
+    border-style:solid; border-color:var(--pine); background:var(--pine-soft); color:var(--pine);
+  }
+  .preset.active .p-name{ color:var(--pine); }
+
+  .field{ margin-bottom:14px; }
+  .field label{
+    display:block; font-size:12.5px; color:var(--ink-soft); margin-bottom:6px; font-weight:500;
+  }
+  .field input{
+    width:100%; padding:12px 13px; border-radius:9px;
+    border:2px solid var(--line); background:var(--paper); color:var(--ink);
+    font-family:'Courier Prime', monospace; font-size:15px; font-weight:700;
+  }
+  .field-row{ display:flex; gap:12px; }
+  .field-row .field{ flex:1; }
+
+  .banner{
+    display:flex; gap:9px; align-items:flex-start;
+    padding:11px 13px; border-radius:9px;
+    font-size:13.5px; line-height:1.45; margin-bottom:16px;
+    border:2px solid var(--danger); background:var(--danger-soft); color:var(--danger);
+  }
+
+  button.action{
+    font-family:'Work Sans', sans-serif; font-weight:700; font-size:14.5px;
+    padding:13px 22px; border-radius:11px 9px 12px 8px;
+    border:2px solid var(--ink);
+    cursor:pointer;
+    box-shadow: 3px 3px 0 var(--ink);
+    transition: transform .08s ease, box-shadow .08s ease, opacity .15s ease;
+  }
+  button.action:hover{ transform: translate(-1px,-1px); box-shadow: 4px 4px 0 var(--ink); }
+  button.action:active{ transform: translate(2px,2px); box-shadow: 1px 1px 0 var(--ink); }
+  button.primary{ background:var(--pine); color:#F4EFE0; }
+  button.primary:disabled{ opacity:.35; cursor:not-allowed; transform:none; box-shadow:3px 3px 0 var(--ink); }
+  button.secondary{ background:var(--paper); color:var(--ink); }
+  .btn-row{ display:flex; gap:12px; flex-wrap:wrap; }
+
+  /* ---------- game panel ---------- */
+  .goal-line{ text-align:center; color:var(--ink-soft); font-size:14px; margin-bottom:2px; }
+  .goal-line b{ color:var(--ink); font-family:'Courier Prime', monospace; }
+  .attempts-line{
+    text-align:center; font-family:'Courier Prime', monospace;
+    font-size:12.5px; color:var(--ink-soft); margin-bottom:20px;
+  }
+
+  /* signature element: hand-drawn dial */
+  .gauge-wrap{
+    position:relative; width:100%; max-width:280px; margin:0 auto 6px;
+    aspect-ratio: 1 / 0.72;
+  }
+  .gauge-wrap svg{ position:absolute; inset:0; width:100%; height:100%; overflow:visible; }
+  .gauge-center{
+    position:absolute; left:50%; top:64%; transform:translate(-50%,-50%);
+    text-align:center; width:82%;
+  }
+  .gauge-feedback{
+    font-family:'Fraunces', serif; font-weight:600;
+    font-size: clamp(17px, 4.4vw, 21px); letter-spacing:.01em;
+    min-height:26px;
+  }
+  .gauge-feedback.cold{ color:var(--pine); }
+  .gauge-feedback.hot{ color:var(--rust); }
+  .gauge-feedback.lock{ color:var(--gold); }
+  .gauge-feedback.idle{ color:var(--ink-soft); font-style:italic; }
+  .gauge-sub{ font-size:12px; color:var(--ink-soft); margin-top:3px; font-family:'Courier Prime', monospace; }
+  .gauge-endlabel{
+    position:absolute; bottom:2px;
+    font-family:'Courier Prime', monospace; font-size:11.5px; color:var(--ink-soft);
+  }
+
+  .guess-row{ display:flex; gap:10px; margin: 18px 0 16px; }
+  .guess-row input{
+    flex:1; padding:14px 16px; border-radius:12px 10px 12px 9px;
+    border:2px solid var(--ink); background:var(--paper); color:var(--ink);
+    font-family:'Courier Prime', monospace; font-size:21px; font-weight:700; text-align:center;
+  }
+  .guess-row button{ flex:0 0 auto; }
+  .inline-msg{
+    text-align:center; font-family:'Courier Prime', monospace;
+    font-size:12.5px; color:var(--danger); min-height:18px; margin-bottom:6px;
+  }
+
+  .log-label{ display:flex; align-items:center; justify-content:space-between; margin-bottom:8px; }
+  .log{
+    display:flex; flex-direction:column-reverse; gap:6px;
+    max-height:150px; overflow-y:auto;
+    border:2px dashed var(--line); border-radius:12px;
+    padding: 9px 11px; background:var(--paper);
+  }
+  .log:empty::after{
+    content:"No guesses yet — go ahead and take a swing.";
+    color:var(--ink-soft); font-size:12.5px; font-family:'Courier Prime',monospace; font-style:italic;
+  }
+  .log-row{
+    display:flex; align-items:center; gap:10px;
+    font-family:'Courier Prime', monospace; font-size:12.5px;
+  }
+  .log-row .idx{ color:var(--ink-soft); width:22px; flex:0 0 auto; }
+  .log-row .val{ font-weight:700; width:52px; flex:0 0 auto; }
+  .log-row .tag{ flex:1; font-style:italic; }
+  .log-row.cold .val, .log-row.cold .tag{ color:var(--pine); }
+  .log-row.hot .val, .log-row.hot .tag{ color:var(--rust); }
+  .log-row.lock .val, .log-row.lock .tag{ color:var(--gold); }
+
+  /* ---------- result ---------- */
+  .result-box{ text-align:center; margin-top:18px; padding-top:16px; border-top:2px dashed var(--line); }
+  .result-box .sub{ color:var(--ink-soft); font-size:13.5px; }
+  .result-box .secret{
+    font-family:'Fraunces', serif; font-style:italic; font-size:46px; font-weight:600; margin: 4px 0 2px;
+    color:var(--gold);
+  }
+  .result-box .sub2{ color:var(--ink-soft); font-size:13.5px; margin-bottom:16px; font-family:'Courier Prime', monospace; }
+
+  /* ---------- stats card ---------- */
+  .stats-grid{ display:grid; grid-template-columns: repeat(4,1fr); gap:11px; }
+  .stat-tile{
+    background:var(--paper); border:2px solid var(--line); border-radius:11px 9px 12px 8px;
+    padding:12px 8px; text-align:center;
+  }
+  .stat-tile .k{ font-size:10.5px; letter-spacing:.06em; text-transform:uppercase; color:var(--ink-soft); margin-bottom:6px; }
+  .stat-tile .v{ font-family:'Fraunces', serif; font-size:21px; font-weight:600; }
+
+  footer{
+    text-align:center; margin-top:22px; font-size:12px; color:var(--ink-soft);
+    font-family:'Fraunces', serif; font-style:italic;
+  }
+
+  @media (max-width:420px){
+    .stats-grid{ grid-template-columns: repeat(2,1fr); }
+    .preset{ min-width:calc(50% - 5px); }
+  }
+  @media (prefers-reduced-motion: reduce){
+    *{ animation:none !important; transition:none !important; }
+  }
+</style>
+</head>
+<body>
+
+<div class="wrap">
+  <div class="hud">
+    <div class="hud-title">
+      <div class="eyebrow">A guessing game</div>
+      <h1>Warmer, Colder</h1>
+    </div>
+    <div class="hud-right">
+      <div class="hud-stat">
+        <div class="k">Won</div>
+        <div class="v mono" id="hudWinRate">—</div>
+      </div>
+      <div class="hud-stat">
+        <div class="k">Streak</div>
+        <div class="v mono" id="hudStreak">—</div>
+      </div>
+      <button class="icon-btn" id="muteBtn" title="Toggle sound" aria-label="Toggle sound"></button>
+    </div>
+  </div>
+
+  <div class="card" id="setupCard">
+    <div class="banner hidden" id="setupError"></div>
+
+    <div class="section-label">Pick a range</div>
+    <div class="presets" id="presets">
+      <button class="preset" data-lower="1" data-upper="50" data-attempts="8">
+        <span class="p-name">A quick round</span><span class="p-range">1–50 · 8 guesses</span>
+      </button>
+      <button class="preset" data-lower="1" data-upper="100" data-attempts="10">
+        <span class="p-name">The usual</span><span class="p-range">1–100 · 10 guesses</span>
+      </button>
+      <button class="preset" data-lower="1" data-upper="1000" data-attempts="15">
+        <span class="p-name">Go big</span><span class="p-range">1–1000 · 15 guesses</span>
+      </button>
+    </div>
+
+    <div class="section-label">Or set your own</div>
+    <div class="field-row">
+      <div class="field">
+        <label for="lowerInput">Lower bound</label>
+        <input type="number" id="lowerInput" value="1">
+      </div>
+      <div class="field">
+        <label for="upperInput">Upper bound</label>
+        <input type="number" id="upperInput" value="100">
+      </div>
+    </div>
+    <div class="field">
+      <label for="attemptsInput">Guesses allowed (blank for unlimited)</label>
+      <input type="number" id="attemptsInput" placeholder="Unlimited" min="1" value="10">
+    </div>
+    <div class="btn-row">
+      <button class="action primary" id="startBtn" style="flex:1;">I'm thinking of a number</button>
+    </div>
+  </div>
+
+  <div class="card hidden" id="gameCard">
+    <div class="goal-line">Somewhere between <b id="rangeLabel"></b></div>
+    <div class="attempts-line" id="attemptsLabel"></div>
+
+    <div class="gauge-wrap">
+      <svg viewBox="0 0 280 210" id="gaugeSvg"></svg>
+      <div class="gauge-center">
+        <div class="gauge-feedback idle" id="feedback">Go on, take a guess</div>
+        <div class="gauge-sub" id="feedbackSub">&nbsp;</div>
+      </div>
+      <div class="gauge-endlabel" id="labelLow" style="left:2%;"></div>
+      <div class="gauge-endlabel" id="labelHigh" style="right:2%;"></div>
+    </div>
+
+    <div class="guess-row">
+      <input type="number" id="guessInput" placeholder="Your guess" autocomplete="off">
+      <button class="action primary" id="guessBtn">Guess</button>
+    </div>
+    <div class="inline-msg" id="inlineMsg">&nbsp;</div>
+
+    <div class="log-label">
+      <div class="section-label" style="margin-bottom:0;">Your guesses</div>
+    </div>
+    <div class="log" id="history"></div>
+
+    <div class="result-box hidden" id="resultBox">
+      <div class="sub" id="resultSub"></div>
+      <div class="secret" id="resultSecret"></div>
+      <div class="sub2" id="resultAttempts"></div>
+      <div class="btn-row" style="justify-content:center;">
+        <button class="action primary" id="playAgainBtn">Play again</button>
+        <button class="action secondary" id="newSettingsBtn">Change the range</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="card" id="statsCard" style="margin-top:18px;">
+    <div class="section-label">How you've done</div>
+    <div class="stats-grid">
+      <div class="stat-tile"><div class="k">Rounds</div><div class="v" id="statPlayed">0</div></div>
+      <div class="stat-tile"><div class="k">Won</div><div class="v" id="statWins">0</div></div>
+      <div class="stat-tile"><div class="k">Best streak</div><div class="v" id="statBestStreak">0</div></div>
+      <div class="stat-tile"><div class="k">Fewest guesses</div><div class="v" id="statBest">—</div></div>
+    </div>
+  </div>
+
+  <footer>the oldest guessing game there is, now with a scoreboard</footer>
+</div>
+
+<script>
+(function(){
+  "use strict";
+
+  // ---------- persistence ----------
+  const STORAGE_KEY = 'warmer-colder:profile';
+  let profile = { stats:{ played:0, wins:0, currentStreak:0, bestStreak:0, bestGuesses:null }, muted:false };
+
+  async function loadProfile(){
+    try{
+      const res = await window.storage.get(STORAGE_KEY, false);
+      if(res && res.value){
+        const parsed = JSON.parse(res.value);
+        profile = Object.assign(profile, parsed);
+      }
+    }catch(e){ /* no saved profile yet */ }
+    renderStats();
+    updateMuteIcon();
+  }
+  async function saveProfile(){
+    try{ await window.storage.set(STORAGE_KEY, JSON.stringify(profile), false); }
+    catch(e){ console.error('Could not save profile', e); }
+  }
+
+  // ---------- sound ----------
+  let audioCtx = null;
+  function getCtx(){
+    if(!audioCtx){
+      const AC = window.AudioContext || window.webkitAudioContext;
+      if(AC) audioCtx = new AC();
+    }
+    return audioCtx;
+  }
+  function beep(freq, dur, type){
+    if(profile.muted) return;
+    const ctx = getCtx();
+    if(!ctx) return;
+    const osc = ctx.createOscillator();
+    const gain = ctx.createGain();
+    osc.type = type || 'sine';
+    osc.frequency.value = freq;
+    gain.gain.setValueAtTime(0.0001, ctx.currentTime);
+    gain.gain.exponentialRampToValueAtTime(0.09, ctx.currentTime + 0.01);
+    gain.gain.exponentialRampToValueAtTime(0.0001, ctx.currentTime + dur);
+    osc.connect(gain); gain.connect(ctx.destination);
+    osc.start(); osc.stop(ctx.currentTime + dur + 0.02);
+  }
+  function soundCold(){ beep(330, 0.16, 'sine'); }
+  function soundHot(){ beep(520, 0.16, 'sine'); }
+  function soundLock(){
+    if(profile.muted) return;
+    beep(620, 0.12, 'triangle');
+    setTimeout(()=>beep(780, 0.16, 'triangle'), 110);
+    setTimeout(()=>beep(980, 0.22, 'triangle'), 220);
+  }
+  function soundWarn(){ beep(180, 0.12, 'square'); }
+
+  const muteBtn = document.getElementById('muteBtn');
+  const ICON_ON = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M4 9v6h4l5 5V4L8 9H4z"/><path d="M16.5 8.5a5 5 0 0 1 0 7"/></svg>';
+  const ICON_OFF = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M4 9v6h4l5 5V4L8 9H4z"/><path d="M17 9l4 6M21 9l-4 6"/></svg>';
+  function updateMuteIcon(){ muteBtn.innerHTML = profile.muted ? ICON_OFF : ICON_ON; }
+  muteBtn.addEventListener('click', () => {
+    profile.muted = !profile.muted;
+    updateMuteIcon();
+    saveProfile();
+    if(!profile.muted) beep(500, 0.08, 'sine');
+  });
+
+  // ---------- stats rendering ----------
+  const hudWinRate = document.getElementById('hudWinRate');
+  const hudStreak = document.getElementById('hudStreak');
+  const statPlayed = document.getElementById('statPlayed');
+  const statWins = document.getElementById('statWins');
+  const statBestStreak = document.getElementById('statBestStreak');
+  const statBest = document.getElementById('statBest');
+
+  function renderStats(){
+    const s = profile.stats;
+    statPlayed.textContent = s.played;
+    statWins.textContent = s.wins;
+    statBestStreak.textContent = s.bestStreak;
+    statBest.textContent = s.bestGuesses == null ? '—' : s.bestGuesses;
+    hudWinRate.textContent = s.played ? Math.round((s.wins / s.played) * 100) + '%' : '—';
+    hudStreak.textContent = s.currentStreak ? s.currentStreak : '—';
+  }
+
+  function recordResult(won, guessesTaken){
+    const s = profile.stats;
+    s.played += 1;
+    if(won){
+      s.wins += 1;
+      s.currentStreak += 1;
+      if(s.currentStreak > s.bestStreak) s.bestStreak = s.currentStreak;
+      if(s.bestGuesses == null || guessesTaken < s.bestGuesses) s.bestGuesses = guessesTaken;
+    } else {
+      s.currentStreak = 0;
+    }
+    renderStats();
+    saveProfile();
+  }
+
+  // ---------- setup elements ----------
+  const setupCard = document.getElementById('setupCard');
+  const gameCard = document.getElementById('gameCard');
+  const setupError = document.getElementById('setupError');
+  const lowerInput = document.getElementById('lowerInput');
+  const upperInput = document.getElementById('upperInput');
+  const attemptsInput = document.getElementById('attemptsInput');
+  const startBtn = document.getElementById('startBtn');
+  const presetsEl = document.getElementById('presets');
+
+  presetsEl.querySelectorAll('.preset').forEach(btn => {
+    btn.addEventListener('click', () => {
+      presetsEl.querySelectorAll('.preset').forEach(b => b.classList.remove('active'));
+      btn.classList.add('active');
+      lowerInput.value = btn.dataset.lower;
+      upperInput.value = btn.dataset.upper;
+      attemptsInput.value = btn.dataset.attempts;
+    });
+  });
+  [lowerInput, upperInput, attemptsInput].forEach(inp => {
+    inp.addEventListener('input', () => {
+      presetsEl.querySelectorAll('.preset').forEach(b => b.classList.remove('active'));
+    });
+  });
+
+  // ---------- game elements ----------
+  const rangeLabel = document.getElementById('rangeLabel');
+  const attemptsLabel = document.getElementById('attemptsLabel');
+  const gaugeSvg = document.getElementById('gaugeSvg');
+  const labelLow = document.getElementById('labelLow');
+  const labelHigh = document.getElementById('labelHigh');
+  const feedback = document.getElementById('feedback');
+  const feedbackSub = document.getElementById('feedbackSub');
+  const guessInput = document.getElementById('guessInput');
+  const guessBtn = document.getElementById('guessBtn');
+  const inlineMsg = document.getElementById('inlineMsg');
+  const historyEl = document.getElementById('history');
+  const resultBox = document.getElementById('resultBox');
+  const resultSub = document.getElementById('resultSub');
+  const resultSecret = document.getElementById('resultSecret');
+  const resultAttempts = document.getElementById('resultAttempts');
+  const playAgainBtn = document.getElementById('playAgainBtn');
+  const newSettingsBtn = document.getElementById('newSettingsBtn');
+
+  let state = null;
+
+  function isIntString(s){ return /^-?\d+$/.test(s.trim()); }
+
+  // ---------- gauge geometry ----------
+  const CX = 140, CY = 150, R = 108, SW = 14;
+  const START_ANGLE = 240, END_ANGLE = 480; // 240deg sweep, gap centered at bottom
+
+  function polarToCartesian(cx, cy, r, angleDeg){
+    const rad = (angleDeg - 90) * Math.PI / 180;
+    return { x: cx + r * Math.cos(rad), y: cy + r * Math.sin(rad) };
+  }
+  function describeArc(cx, cy, r, a0, a1){
+    if(a1 - a0 <= 0.001) return '';
+    const p0 = polarToCartesian(cx, cy, r, a0);
+    const p1 = polarToCartesian(cx, cy, r, a1);
+    const largeArc = (a1 - a0) % 360 > 180 ? 1 : 0;
+    return `M ${p0.x.toFixed(2)} ${p0.y.toFixed(2)} A ${r} ${r} 0 ${largeArc} 1 ${p1.x.toFixed(2)} ${p1.y.toFixed(2)}`;
+  }
+  function angleFor(v){
+    const frac = (v - state.lower) / (state.upper - state.lower);
+    return START_ANGLE + frac * (END_ANGLE - START_ANGLE);
+  }
+
+  function buildGaugeSkeleton(){
+    gaugeSvg.innerHTML = `
+      <defs>
+        <filter id="rough" x="-20%" y="-20%" width="140%" height="140%">
+          <feTurbulence type="fractalNoise" baseFrequency="0.045" numOctaves="2" seed="7" result="n"/>
+          <feDisplacementMap in="SourceGraphic" in2="n" scale="3.2"/>
+        </filter>
+        <linearGradient id="liveGrad" x1="0%" y1="0%" x2="100%" y2="0%">
+          <stop offset="0%" stop-color="var(--pine)"/>
+          <stop offset="50%" stop-color="#B9A87E"/>
+          <stop offset="100%" stop-color="var(--rust)"/>
+        </linearGradient>
+      </defs>
+      <path id="trackBase" fill="none" stroke="var(--line)" stroke-width="${SW}" stroke-linecap="round" filter="url(#rough)"></path>
+      <path id="deadLowArc" fill="none" stroke="#DCCFAE" stroke-width="${SW}" stroke-linecap="round" filter="url(#rough)"></path>
+      <path id="deadHighArc" fill="none" stroke="#DCCFAE" stroke-width="${SW}" stroke-linecap="round" filter="url(#rough)"></path>
+      <path id="liveArc" fill="none" stroke="url(#liveGrad)" stroke-width="${SW}" stroke-linecap="round" filter="url(#rough)"></path>
+      <g id="ticks"></g>
+      <circle id="pivot" cx="${CX}" cy="${CY}" r="5" fill="var(--card)" stroke="var(--ink)" stroke-width="2"></circle>
+      <line id="needle" x1="${CX}" y1="${CY}" x2="${CX}" y2="${CY - R + 10}" stroke="var(--ink-soft)" stroke-width="3" stroke-linecap="round" filter="url(#rough)"></line>
+    `;
+    document.getElementById('trackBase').setAttribute('d', describeArc(CX, CY, R, START_ANGLE, END_ANGLE));
+  }
+
+  function renderGauge(){
+    document.getElementById('deadLowArc').setAttribute('d', describeArc(CX, CY, R, angleFor(state.lower), angleFor(state.possibleLow)));
+    document.getElementById('deadHighArc').setAttribute('d', describeArc(CX, CY, R, angleFor(state.possibleHigh), angleFor(state.upper)));
+    document.getElementById('liveArc').setAttribute('d', describeArc(CX, CY, R, angleFor(state.possibleLow), angleFor(state.possibleHigh)));
+    labelLow.textContent = state.lower;
+    labelHigh.textContent = state.upper;
+  }
+
+  function setNeedle(value, colorVar){
+    const needle = document.getElementById('needle');
+    const angle = angleFor(value);
+    const tip = polarToCartesian(CX, CY, R - 6, angle);
+    needle.setAttribute('x2', tip.x.toFixed(2));
+    needle.setAttribute('y2', tip.y.toFixed(2));
+    needle.setAttribute('stroke', colorVar);
+  }
+
+  function addTick(value, colorVar){
+    const angle = angleFor(value);
+    const p = polarToCartesian(CX, CY, R, angle);
+    const ns = 'http://www.w3.org/2000/svg';
+    const c = document.createElementNS(ns, 'circle');
+    c.setAttribute('cx', p.x.toFixed(2));
+    c.setAttribute('cy', p.y.toFixed(2));
+    c.setAttribute('r', 3.4);
+    c.setAttribute('fill', colorVar);
+    document.getElementById('ticks').appendChild(c);
+  }
+
+  function addLogRow(idx, value, kind, label){
+    const row = document.createElement('div');
+    row.className = 'log-row ' + kind;
+    row.innerHTML = `<span class="idx">#${idx}</span><span class="val">${value}</span><span class="tag">${label}</span>`;
+    historyEl.appendChild(row);
+    historyEl.scrollTop = historyEl.scrollHeight;
+  }
+
+  function updateAttemptsLabel(){
+    if(state.maxAttempts){
+      const left = state.maxAttempts - state.attempts;
+      attemptsLabel.textContent = `Guess ${state.attempts + (state.over?0:1)} of ${state.maxAttempts} · ${Math.max(0,left)} left`;
+    } else {
+      attemptsLabel.textContent = state.attempts === 0 ? 'No limit on guesses' : `${state.attempts} guess${state.attempts===1?'':'es'} so far`;
+    }
+  }
+
+  function startGame(lower, upper, maxAttempts){
+    const secret = lower + Math.floor(Math.random() * (upper - lower + 1));
+    state = { lower, upper, maxAttempts, secret, attempts:0, possibleLow: lower, possibleHigh: upper, over:false };
+
+    rangeLabel.textContent = `${lower} and ${upper}`;
+    updateAttemptsLabel();
+    feedback.textContent = 'Go on, take a guess';
+    feedback.className = 'gauge-feedback idle';
+    feedbackSub.innerHTML = '&nbsp;';
+    inlineMsg.innerHTML = '&nbsp;';
+    historyEl.innerHTML = '';
+    guessInput.value = '';
+    guessInput.disabled = false;
+    guessBtn.disabled = false;
+    resultBox.classList.add('hidden');
+
+    buildGaugeSkeleton();
+    renderGauge();
+    const needle = document.getElementById('needle');
+    needle.setAttribute('x2', CX);
+    needle.setAttribute('y2', CY - R + 10);
+    needle.setAttribute('stroke', 'var(--ink-soft)');
+
+    setupCard.classList.add('hidden');
+    gameCard.classList.remove('hidden');
+    guessInput.focus();
+  }
+
+  function endGame(won){
+    state.over = true;
+    guessInput.disabled = true;
+    guessBtn.disabled = true;
+    resultBox.classList.remove('hidden');
+    resultSecret.textContent = state.secret;
+    if(won){
+      resultSub.textContent = 'Got it in';
+      resultAttempts.textContent = `${state.attempts} guess${state.attempts===1?'':'es'}.`;
+    } else {
+      resultSub.textContent = "Out of guesses. It was";
+      resultAttempts.textContent = '';
+    }
+    recordResult(won, state.attempts);
+  }
+
+  guessBtn.addEventListener('click', submitGuess);
+  guessInput.addEventListener('keydown', (e) => { if(e.key==='Enter') submitGuess(); });
+
+  function submitGuess(){
+    if(!state || state.over) return;
+    const raw = guessInput.value.trim();
+
+    if(raw === '' || !isIntString(raw)){
+      inlineMsg.textContent = 'That needs to be a whole number.';
+      soundWarn();
+      return;
+    }
+    if(state.maxAttempts && state.attempts >= state.maxAttempts) return;
+
+    const guess = parseInt(raw, 10);
+
+    if(guess < state.lower || guess > state.upper){
+      inlineMsg.textContent = `Stick to ${state.lower}–${state.upper}.`;
+      soundWarn();
+      return;
+    }
+
+    inlineMsg.innerHTML = '&nbsp;';
+    state.attempts += 1;
+    guessInput.value = '';
+    guessInput.focus();
+
+    if(guess === state.secret){
+      state.possibleLow = guess; state.possibleHigh = guess;
+      renderGauge();
+      setNeedle(guess, 'var(--gold)');
+      addTick(guess, 'var(--gold)');
+      addLogRow(state.attempts, guess, 'lock', 'that\u2019s it');
+      feedback.textContent = 'That\u2019s the one!';
+      feedback.className = 'gauge-feedback lock';
+      feedbackSub.textContent = `Found in ${state.attempts} guess${state.attempts===1?'':'es'}`;
+      updateAttemptsLabel();
+      soundLock();
+      endGame(true);
+      return;
+    }
+
+    if(guess < state.secret){
+      state.possibleLow = Math.max(state.possibleLow, guess + 1);
+      setNeedle(guess, 'var(--pine)');
+      addTick(guess, 'var(--pine)');
+      addLogRow(state.attempts, guess, 'cold', 'too low');
+      feedback.textContent = 'A bit low — try higher';
+      feedback.className = 'gauge-feedback cold';
+      soundCold();
+    } else {
+      state.possibleHigh = Math.min(state.possibleHigh, guess - 1);
+      setNeedle(guess, 'var(--rust)');
+      addTick(guess, 'var(--rust)');
+      addLogRow(state.attempts, guess, 'hot', 'too high');
+      feedback.textContent = 'A bit high — try lower';
+      feedback.className = 'gauge-feedback hot';
+      soundHot();
+    }
+    const remaining = state.possibleHigh - state.possibleLow + 1;
+    feedbackSub.textContent = `${remaining} number${remaining===1?'':'s'} left it could be`;
+
+    renderGauge();
+    updateAttemptsLabel();
+
+    if(state.maxAttempts && state.attempts >= state.maxAttempts){
+      feedback.textContent = 'Out of guesses';
+      feedback.className = 'gauge-feedback hot';
+      feedbackSub.textContent = `It was ${state.secret}`;
+      endGame(false);
+    }
+  }
+
+  function showSetupError(msg){
+    setupError.textContent = msg;
+    setupError.classList.remove('hidden');
+  }
+  function clearSetupError(){ setupError.classList.add('hidden'); }
+
+  startBtn.addEventListener('click', () => {
+    clearSetupError();
+    const lowerRaw = lowerInput.value.trim();
+    const upperRaw = upperInput.value.trim();
+    const attemptsRaw = attemptsInput.value.trim();
+
+    if(!isIntString(lowerRaw) || !isIntString(upperRaw)){
+      showSetupError('Lower and upper bound need to be whole numbers.');
+      return;
+    }
+    const lower = parseInt(lowerRaw, 10);
+    const upper = parseInt(upperRaw, 10);
+    if(lower >= upper){
+      showSetupError('The upper bound has to be greater than the lower bound.');
+      return;
+    }
+    let maxAttempts = null;
+    if(attemptsRaw !== ''){
+      if(!isIntString(attemptsRaw) || parseInt(attemptsRaw,10) < 1){
+        showSetupError('Guesses allowed needs to be a whole number of 1 or more, or left blank.');
+        return;
+      }
+      maxAttempts = parseInt(attemptsRaw, 10);
+    }
+    startGame(lower, upper, maxAttempts);
+  });
+
+  playAgainBtn.addEventListener('click', () => startGame(state.lower, state.upper, state.maxAttempts));
+  newSettingsBtn.addEventListener('click', () => {
+    gameCard.classList.add('hidden');
+    setupCard.classList.remove('hidden');
+    clearSetupError();
+  });
+
+  loadProfile();
+})();
+</script>
+</body>
+</html>
